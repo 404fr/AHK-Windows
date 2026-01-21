@@ -8,7 +8,7 @@ A lightweight AutoHotkey v2 script that brings Linux-style window management to 
 - **Quick Maximize/Restore**: Double-click `Win` + `Left Mouse Button` on a window to toggle between Maximized and Restored states.
 - **Easy Window Resizing**: Hold `Win` and drag with the `Right Mouse Button` anywhere on a window to resize it.
     - The resize direction depends on which quadrant of the window you click (e.g., clicking the top-left area resizes the top-left corner).
-- **Smoother Experience**: Optimized for performance with reduced delay and realtime priority.
+- **Smoother Experience**: Uses native Windows OS window management for maximum smoothness and performance, supporting features like Aero Snap.
 
 ## Prerequisites
 

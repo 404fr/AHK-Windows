@@ -15,12 +15,11 @@
 ; Author: [Your Name/Handle]
 ; ==============================================================================
 
-; Optimization Settings for smoother window interactions
+; Optimization Settings
 SetWinDelay -1
 SetControlDelay -1
 SetMouseDelay -1
 SetDefaultMouseSpeed 0
-ProcessSetPriority "Realtime" ; Critical for smooth resizing to prevent lag
 
 CoordMode "Mouse", "Screen" ; Use absolute screen coordinates
 
@@ -47,37 +46,13 @@ CoordMode "Mouse", "Screen" ; Use absolute screen coordinates
 
     ; Prepare for Move operation
     ; If the window is currently maximized, restore it first.
-    ; Moving a maximized window directly usually doesn't work well in Windows.
     if (WinGetMinMax("ahk_id " id) == 1)
         WinRestore "ahk_id " id 
-        
-    ; Get initial window position and size
-    WinGetPos &wx, &wy, &ww, &wh, "ahk_id " id
-    ; Get initial mouse position
-    MouseGetPos &mx, &my
     
-    ; Calculate the offset of the mouse relative to the window's top-left corner.
-    ; This ensures the window doesn't "snap" its top-left corner to the mouse position.
-    off_x := mx - wx
-    off_y := my - wy
-
-    ; Move Loop: Continue while Left Mouse Button and Windows Key are held down
-    while GetKeyState("LButton", "P") and (GetKeyState("LWin", "P") or GetKeyState("RWin", "P"))
-    {
-        MouseGetPos &curr_mx, &curr_my
-        
-        ; Only perform the move if the mouse has actually changed position.
-        ; This reduces unnecessary system calls and jitter.
-        if (curr_mx != mx or curr_my != my)
-        {
-            WinMove curr_mx - off_x, curr_my - off_y,,, "ahk_id " id
-            mx := curr_mx
-            my := curr_my
-        }
-        ; Sleep 0 yields the rest of the CPU time slice to other processes,
-        ; preventing this loop from monopolizing the CPU.
-        Sleep 0 
-    }
+    ; Post WM_NCLBUTTONDOWN message (0xA1) with HTCAPTION (2)
+    ; This tells the OS that the user clicked the title bar, initiating a native move loop.
+    ; This is much smoother than manual WinMove loops.
+    PostMessage 0xA1, 2, 0, , "ahk_id " id
 }
 
 ; ==============================================================================
@@ -99,46 +74,24 @@ CoordMode "Mouse", "Screen" ; Use absolute screen coordinates
     
     ; Determine Quadrant (Left/Right/Top/Bottom)
     ; This decides which edge(s) of the window get resized.
-    ; If mouse is on the left half, we modify the X/Width (Left resize).
-    ; If mouse is on the right half, we modify Width only (Right resize).
-    ; Same logic applies for Top/Bottom.
     resize_L := (mx < wx + (ww / 2))
     resize_T := (my < wy + (wh / 2))
 
-    ; Resize Loop
-    while GetKeyState("RButton", "P") and (GetKeyState("LWin", "P") or GetKeyState("RWin", "P"))
-    {
-        MouseGetPos &curr_mx, &curr_my
-
-        if (curr_mx != mx or curr_my != my)
-        {
-            dx := curr_mx - mx
-            dy := curr_my - my
-            
-            ; Calculate new dimensions based on the delta
-            final_x := wx
-            final_y := wy
-            final_w := ww
-            final_h := wh
-
-            if (resize_L) {
-                final_x += dx
-                final_w -= dx
-            } else {
-                final_w += dx
-            }
-
-            if (resize_T) {
-                final_y += dy
-                final_h -= dy
-            } else {
-                final_h += dy
-            }
-
-            ; Apply changes, ensuring the window doesn't become too small (minimum 50x50)
-            if (final_w > 50 && final_h > 50)
-                WinMove final_x, final_y, final_w, final_h, "ahk_id " id
-        }
-        Sleep 0
+    ; Determine HitTest value for WM_NCLBUTTONDOWN
+    ; HTTOPLEFT = 13, HTTOPRIGHT = 14, HTBOTTOMLEFT = 16, HTBOTTOMRIGHT = 17
+    hit_test := 0
+    if (resize_T) {
+        if (resize_L)
+            hit_test := 13 ; Top-Left
+        else
+            hit_test := 14 ; Top-Right
+    } else {
+        if (resize_L)
+            hit_test := 16 ; Bottom-Left
+        else
+            hit_test := 17 ; Bottom-Right
     }
+
+    ; Initiate native resize
+    PostMessage 0xA1, hit_test, 0, , "ahk_id " id
 }
