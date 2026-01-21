@@ -29,7 +29,7 @@ CoordMode "Mouse", "Screen" ; Use absolute screen coordinates
 #LButton::
 {
     ; Get the unique ID (HWND) of the window under the mouse
-    MouseGetPos ,, &id
+    MouseGetPos &mx, &my, &id
     if !id
         return
 
@@ -52,7 +52,8 @@ CoordMode "Mouse", "Screen" ; Use absolute screen coordinates
     ; Post WM_NCLBUTTONDOWN message (0xA1) with HTCAPTION (2)
     ; This tells the OS that the user clicked the title bar, initiating a native move loop.
     ; This is much smoother than manual WinMove loops.
-    PostMessage 0xA1, 2, 0, , "ahk_id " id
+    ; lParam must contain the screen coordinates of the mouse click (packed X in low word, Y in high word).
+    PostMessage 0xA1, 2, (my << 16) | (mx & 0xFFFF), , "ahk_id " id
 }
 
 ; ==============================================================================
@@ -93,5 +94,6 @@ CoordMode "Mouse", "Screen" ; Use absolute screen coordinates
     }
 
     ; Initiate native resize
-    PostMessage 0xA1, hit_test, 0, , "ahk_id " id
+    ; lParam must contain the screen coordinates of the mouse click.
+    PostMessage 0xA1, hit_test, (my << 16) | (mx & 0xFFFF), , "ahk_id " id
 }
